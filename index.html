@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventario Suc 2860</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body{margin:0;font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#e3f2fd,#bbdefb);}
+header{background:white;padding:12px 16px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,0.1);gap:10px;}
+.logo{width:100px}
+.container{max-width:1100px;margin:auto;padding:15px;}
+.card{background:white;border-radius:16px;padding:18px;margin-bottom:18px;box-shadow:0 10px 25px rgba(0,0,0,0.1);}
+.producto{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px;border-radius:12px;background:#f7fbff;margin:10px 0;}
+.producto img{width:70px;height:70px;border-radius:10px;background:white;object-fit:contain;padding:5px;}
+button{background:linear-gradient(135deg,#1976d2,#42a5f5);color:white;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600;margin:4px;}
+button:active{transform:scale(.97)}
+input{padding:8px;border-radius:8px;border:1px solid #ccc;max-width:140px;}
+.login{max-width:320px;margin:80px auto;text-align:center;}
+@media (max-width:600px){
+header{flex-direction:column;text-align:center}
+.producto{flex-direction:column;align-items:flex-start}
+.producto img{width:100%;max-width:120px;height:auto}
+input{max-width:100%}
+button{width:100%}
+}
+</style>
+</head>
+
+<body>
+
+<audio id="sndClick" preload="auto">
+<source src="https://cdn.pixabay.com/download/audio/2022/03/10/audio_0f4a0c1b9b.mp3">
+</audio>
+
+<audio id="sndPop" preload="auto">
+<source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_efc9c5e0b9.mp3">
+</audio>
+
+<div id="loginBox" class="card login">
+<h2>Acceso al sistema</h2>
+<input id="usuario" placeholder="Usuario"><br><br>
+<input id="password" type="password" placeholder="Contraseña"><br><br>
+<button onclick="sonidoClick();login()">Ingresar</button>
+<p id="error" style="color:red"></p>
+</div>
+
+<div id="sistema" style="display:none">
+
+<header>
+<div>
+<img src="logo.png" class="logo">
+<h3>Sucursal 2860</h3>
+</div>
+<div>
+<span id="usuarioActivo"></span>
+<button onclick="sonidoClick();logout()">Cerrar sesión</button>
+</div>
+</header>
+
+<div class="container">
+
+<div class="card">
+<h3>Productos</h3>
+<div id="zonaAgregar"></div>
+<div id="listaProductos"></div>
+</div>
+
+<div class="card">
+<h3>Mi conteo</h3>
+<button onclick="sonidoClick();mostrarConteo()">Ver mi conteo</button>
+<button onclick="sonidoClick();exportarPDF()">Exportar PDF</button>
+<div id="resultado"></div>
+</div>
+
+<div class="card" id="buzonAlma" style="display:none">
+<h3>📥 Buzón de reportes</h3>
+<div id="listaReportes"></div>
+</div>
+
+</div>
+</div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+function sonidoClick(){const s=document.getElementById("sndClick");s.currentTime=0;s.play().catch(()=>{});}
+function sonidoPop(){const s=document.getElementById("sndPop");s.currentTime=0;s.play().catch(()=>{});}
+
+const usuarios={
+"497271":"suc2860","Miros":"empleado1","Juan":"empleado2",
+"Antonio":"empleado3","Lupita":"empleado4","Yezica":"empleado5",
+"Alan":"empleado6","Getse":"empleado7","Alma":"Jefa1",
+"Melissa":"Jefa3","Jonathan":"Jefe2","Gio":"Nocturno1",
+"Alexia":"Empleado8","Gladis":"Empleado9","Ale":"Empleado10",
+"Chris":"Empleado11","Ivette":"Empleado12","Lluvia":"Empleado13",
+"Tania":"Empleado14"
+};
+
+const puedeEditar=["497271","Alma"];
+let productos=JSON.parse(localStorage.getItem("productos2860"))||[];
+
+if(productos.length===0){
+productos=[
+{codigo:"1411772",nombre:"DESOD ARM&HAMMER U/M FRESH 73G",img:""},
+{codigo:"1419340",nombre:"DESOD ARM&HAMMER U/M SPORT 73G",img:""},
+{codigo:"1215590",nombre:"DESOD AXE ANARCHY 150M BDY/SP",img:""},
+{codigo:"1215531",nombre:"DESOD AXE APOLLO 150ML BDY/SPY",img:""},
+{codigo:"1166530",nombre:"DESOD AXE APOLLO AP/AE 152ML C",img:""},
+{codigo:"1166514",nombre:"DESOD AXE APOLLO CAB/45GR BARR",img:""},
+{codigo:"1420275",nombre:"DESOD AXE AQUA CITR 150ML BOD",img:""},
+{codigo:"1207911",nombre:"DESOD AXE BLACK 150ML SPY 48H",img:""},
+{codigo:"1234790",nombre:"DESOD AXE BLACK NIGHT BODY 150",img:""},
+{codigo:"1410555",nombre:"DESOD AXE BLACK RE BZRP 210ML",img:""},
+{codigo:"1410563",nombre:"DESOD AXE BLACK RE BZRP 45GR B",img:""},
+{codigo:"1420291",nombre:"DESOD AXE BLUE/LAVN 150ML BOD",img:""},
+{codigo:"1444468",nombre:"DESOD AXE CHERRY SPRITZ 150ML",img:""},
+{codigo:"1267760",nombre:"DESOD AXE COLLISION 150ML AER",img:""},
+{codigo:"1215515",nombre:"DESOD AXE CONVICTION 150M BDY",img:""},
+{codigo:"1215540",nombre:"DESOD AXE DARK TEMP 150ML BDY",img:""},
+{codigo:"1407864",nombre:"DESOD AXE DARK TEMP 210ML BDY",img:""},
+{codigo:"1387634",nombre:"DESOD AXE EPIC FR 152ML A/TR S",img:""},
+{codigo:"1215558",nombre:"DESOD AXE EXCITE 150ML BDY/SPY",img:""},
+{codigo:"1120301",nombre:"DESOD AXE EXCITE 72H 152ML SPY",img:""},
+{codigo:"1361325",nombre:"DESOD AXE FUSION 150ML 3PZ PAC",img:""},
+{codigo:"1215582",nombre:"DESOD AXE FUSION 150ML BODY SP",img:""},
+{codigo:"1322524",nombre:"DESOD AXE ICE CHILL 150M BOY/S",img:""},
+{codigo:"1322559",nombre:"DESOD AXE ICE CHILL SECO 152M",img:""},
+{codigo:"1469258",nombre:"DESOD AXE INDIGO HAZE 150ML SP",img:""},
+{codigo:"1360124",nombre:"DESOD AXE INTENSE S/FRSH 150M",img:""},
+{codigo:"1294865",nombre:"DESOD AXE KILO 150ML SPRAY CAB",img:""},
+{codigo:"1469029",nombre:"DESOD AXE MARSH/SMOKE 150ML SP",img:""},
+{codigo:"1433776",nombre:"DESOD AXE P/COCONUT BZRP 150M",img:""},
+{codigo:"1444549",nombre:"DESOD AXE PEACH INFUSION 150M",img:""},
+{codigo:"1469240",nombre:"DESOD AXE WHITE/VETIV 150ML SP",img:""},
+{codigo:"1215523",nombre:"DESOD AXE YOUNG 150ML BDY/SPY",img:""},
+{codigo:"1345532",nombre:"DESOD BRUT CLASSIC 150ML AER",img:""},
+{codigo:"978299",nombre:"DESOD BRUT CLASSIC 208ML AEROS",img:""},
+{codigo:"1011138",nombre:"DESOD BRUT CLASSIC 65GR STICK",img:""},
+{codigo:"978310",nombre:"DESOD BRUT CLASSIC ANTI 50G RO",img:""},
+{codigo:"1433466",nombre:"DESOD BRUT GHOST ANTI 50G ROLL",img:""}
+];
+localStorage.setItem("productos2860",JSON.stringify(productos));
+}
+
+let usuarioActual=null;
+let conteos={};
+
+function guardarProductos(){localStorage.setItem("productos2860",JSON.stringify(productos));}
+function guardarConteos(){localStorage.setItem("conteo_"+usuarioActual,JSON.stringify(conteos));}
+function cargarConteos(){conteos=JSON.parse(localStorage.getItem("conteo_"+usuarioActual))||{};}
+
+function login(){
+const u=usuario.value,p=password.value;
+if(usuarios[u]&&usuarios[u]===p){
+usuarioActual=u;
+cargarConteos();
+loginBox.style.display="none";
+sistema.style.display="block";
+usuarioActivo.textContent="Usuario: "+u;
+cargarVista();
+}else error.textContent="Datos incorrectos";
+}
+
+function logout(){location.reload();}
+
+function cargarVista(){
+zonaAgregar.innerHTML="";
+if(puedeEditar.includes(usuarioActual)){
+const btn=document.createElement("button");
+btn.textContent="Agregar producto";
+btn.onclick=()=>{sonidoClick();agregarProducto();};
+zonaAgregar.appendChild(btn);
+}
+renderProductos();
+
+if(usuarioActual==="Alma"){
+document.getElementById("buzonAlma").style.display="block";
+cargarReportesAlma();
+}
+}
+
+function renderProductos(){
+listaProductos.innerHTML="";
+productos.forEach((p,i)=>{
+const cantidad=conteos[i]||0;
+let admin="";
+if(puedeEditar.includes(usuarioActual)){
+admin=`<input type="file" accept="image/*" onchange="cambiarImagen(${i},this)">
+<button onclick="sonidoClick();eliminarProducto(${i})">Borrar</button>`;
+}
+const div=document.createElement("div");
+div.className="producto";
+div.innerHTML=`
+<img src="${p.img}">
+<b>${p.nombre}</b><br>
+Código: ${p.codigo}<br>
+Mi conteo:
+<input type="number" value="${cantidad}" min="0"
+onchange="actualizarMiConteo(${i},this.value)">
+${admin}`;
+listaProductos.appendChild(div);
+});
+}
+
+function cambiarImagen(i,input){
+const file=input.files[0];
+if(file){
+const reader=new FileReader();
+reader.onload=e=>{
+productos[i].img=e.target.result;
+guardarProductos();
+cargarVista();
+};
+reader.readAsDataURL(file);
+}
+}
+
+function agregarProducto(){
+sonidoPop();
+const div=document.createElement("div");
+div.className="producto";
+div.innerHTML=`
+<input type="file" accept="image/*">
+<img style="display:none">
+<input type="text" placeholder="Nombre">
+<input type="text" placeholder="Código">
+<button onclick="sonidoClick();guardarProducto(this)">Guardar</button>`;
+const fileInput=div.querySelector("input[type=file]");
+const img=div.querySelector("img");
+fileInput.addEventListener("change",e=>{
+const reader=new FileReader();
+reader.onload=ev=>{img.src=ev.target.result;img.style.display="block";}
+reader.readAsDataURL(e.target.files[0]);
+});
+listaProductos.prepend(div);
+}
+
+function guardarProducto(btn){
+const cont=btn.parentElement;
+const nombre=cont.children[2].value;
+const codigo=cont.children[3].value;
+const img=cont.children[1].src;
+if(!nombre){alert("Falta nombre");return;}
+productos.push({nombre,codigo,img});
+guardarProductos();
+cargarVista();
+}
+
+function actualizarMiConteo(i,c){conteos[i]=c;guardarConteos();}
+function eliminarProducto(i){
+if(confirm("Eliminar producto para todos?")){
+productos.splice(i,1);
+guardarProductos();
+cargarVista();
+}
+}
+
+function mostrarConteo(){
+resultado.innerHTML="<b>Mi conteo:</b><br>";
+productos.forEach((p,i)=>{
+resultado.innerHTML+=`${p.nombre} — ${conteos[i]||0}<br>`;
+});
+}
+
+function guardarReporteParaAlma(nombreUsuario, pdfBase64){
+let reportes = JSON.parse(localStorage.getItem("reportesAlma2860")) || [];
+reportes.push({usuario:nombreUsuario,fecha:new Date().toLocaleString(),archivo:pdfBase64});
+localStorage.setItem("reportesAlma2860", JSON.stringify(reportes));
+}
+
+function cargarReportesAlma(){
+const cont=document.getElementById("listaReportes");
+let reportes=JSON.parse(localStorage.getItem("reportesAlma2860"))||[];
+cont.innerHTML="";
+if(reportes.length===0){cont.innerHTML="No hay reportes aún";return;}
+
+reportes.reverse().forEach((r,index)=>{
+const btn=document.createElement("button");
+btn.textContent=`Abrir reporte de ${r.usuario} (${r.fecha})`;
+btn.onclick=()=>descargarReporte(r.archivo);
+
+const borrar=document.createElement("button");
+borrar.textContent="❌";
+borrar.onclick=()=>eliminarReporte(index);
+
+cont.appendChild(btn);
+cont.appendChild(borrar);
+cont.appendChild(document.createElement("br"));
+});
+}
+
+function eliminarReporte(index){
+let reportes=JSON.parse(localStorage.getItem("reportesAlma2860"))||[];
+reportes.splice(reportes.length-1-index,1);
+localStorage.setItem("reportesAlma2860",JSON.stringify(reportes));
+cargarReportesAlma();
+}
+
+function descargarReporte(base64){
+const link=document.createElement("a");
+link.href=base64;
+link.download="reporte_conteo.pdf";
+link.click();
+}
+
+function exportarPDF(){
+sonidoClick();
+const doc=new jsPDF();
+doc.text("Conteo - Sucursal 2860",20,20);
+doc.text("Empleado: "+usuarioActual,20,30);
+let y=45;
+productos.forEach((p,i)=>{
+doc.text(`${p.nombre} - ${conteos[i]||0}`,20,y);
+y+=10;
+});
+doc.save("mi_conteo.pdf");
+guardarReporteParaAlma(usuarioActual,doc.output("datauristring"));
+}
+</script>
+
+</body>
+</html>
